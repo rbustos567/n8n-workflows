@@ -1,0 +1,1173 @@
+{
+  "name": "Send news from various categories to email",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 8,
+              "triggerAtMinute": 5
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -320,
+        -16
+      ],
+      "id": "a75ee698-9279-47e1-9e2a-058452da77da",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "18febf09-db17-4895-a271-d5b29897c0ca",
+              "name": "title",
+              "value": "={{ $json.title }}",
+              "type": "string"
+            },
+            {
+              "id": "fce93d35-9f59-4d0d-ab9f-6de19d16d0e0",
+              "name": "link",
+              "value": "={{ $json.link }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        64,
+        -16
+      ],
+      "id": "e72e3d7f-5b70-4834-9524-82d1e8e27e44",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "lista_noticias",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        256,
+        -16
+      ],
+      "id": "b865c879-ddec-483d-9511-b9078b1c19e8",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Act as an expert news editor. Analyze the following list of international news and select only the 10 most important ones based on global impact, political relevance, or significant human interest.\nFormatting instructions:\n1. Select exactly 10 news items.\n2. Do not enumerate each item.\n3. For each item, list the title followed by its link on the immediate line below.\n4. Separate each news block with a single blank line.\n5. Provide only the list. Do not include introductions, conclusions, or additional commentary.\nHere is the list of news:\n{{ $json.lista_noticias.map(item => item.title + \"-\" + item.link).join('\\n') }}",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        480,
+        -16
+      ],
+      "id": "fa232a85-7331-41f0-ae3f-1a1ae65adb76",
+      "name": "Basic LLM Chain",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "model": "llama3.1:8b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        480,
+        112
+      ],
+      "id": "5de18692-f986-4fff-bb27-655c072b8303",
+      "name": "Ollama Chat Model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "lpkQ0mh5FtzNiBQH",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        -128,
+        272
+      ],
+      "id": "441f6fa5-4ab3-4e8b-ad58-c4f71e7f8bac",
+      "name": "RSS Read NYT"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f513ba81-4561-4ce2-8401-9447df1f6016",
+              "name": "title",
+              "value": "={{ $json.title }}",
+              "type": "string"
+            },
+            {
+              "id": "7d2999bc-7f2b-4956-ac3a-a7eab7253be0",
+              "name": "link",
+              "value": "={{ $json.link }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        48,
+        272
+      ],
+      "id": "e6a59792-9f94-4cd7-a6e0-a711c6febe8c",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "lista_noticias",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        240,
+        272
+      ],
+      "id": "9d023650-6796-45b4-836b-745283166d47",
+      "name": "Aggregate2"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Act as an expert news editor. Analyze the following list of international news and select only the 10 most important ones based on global impact, political relevance, or significant human interest.\nFormatting instructions:\n1. Select exactly 10 news items.\n2. Do not enumerate each item.\n3. For each item, list the title followed by its link on the immediate line below.\n4. Separate each news block with a single blank line.\n4. Provide only the list. Do not include introductions, conclusions, or additional commentary.\nHere is the list of news:\n{{ $json.lista_noticias.map(item => item.title + \"-\" + item.link).join('\\n') }}",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        464,
+        272
+      ],
+      "id": "12880c58-b43b-4757-800e-befb2055817f",
+      "name": "Basic LLM Chain1",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "model": "llama3.1:8b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        464,
+        432
+      ],
+      "id": "ba279166-9311-4c3d-ae21-366bbd968597",
+      "name": "Ollama Chat Model1",
+      "credentials": {
+        "ollamaApi": {
+          "id": "lpkQ0mh5FtzNiBQH",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "numberInputs": 3
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        944,
+        256
+      ],
+      "id": "6a3d5395-587d-48cc-9917-a33fed1b3a68",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a6788692-ed2e-425d-90c3-30e353d0d6a9",
+              "name": "noticias_merged",
+              "value": "={{ $json.text + \"\\n\\n\" + $json.text1 + \"\\n\\n\" + $json.text2 }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1120,
+        272
+      ],
+      "id": "5c66dbb6-03de-496a-b0c7-832444904453",
+      "name": "Edit Fields2"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "lista_noticias_todas",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        1328,
+        272
+      ],
+      "id": "3a372587-23b3-46dc-ab4d-9d6ce46ca586",
+      "name": "Aggregate1"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Act as an expert news editor. Analyze the following list of international news and select only the 10 most important ones based on global impact, political relevance, or significant human interest.\nOutput requirements:\n​1. Header Spacing: Start your response exactly with: \"These are the top 10 most important news:\". Follow this phrase with two HTML line break tags (<br><br>).\n​2. Professional Numbered List: Use an HTML ordered list (<ol>) to format the stories. Wrap each individual news item inside <li> tags.\n​3. Internal Item Layout: Inside each <li>, format the content as follows:\n[Title of the news] > <a href=\"URL\" style=\"color: #1a73e8; text-decoration: none; font-weight: bold;\">[Read more]</a>\n​4. Spacing: Add a margin-bottom: 15px; to each <li> tag to ensure there is enough white space between the different news stories.\n​5. Clean Links: Use \"[Read more]\" as the anchor text. Do not display raw URLs or the word \"Link:\".\n6. Final Spacing: After closing the ordered list (</ol>), add two HTML line break tags (<br><br>) to create whitespace at the end of the response.\nHere is the list of news:\n{{ $json.lista_noticias_todas.map(item => item.noticias_merged).join('\\n\\n---\\n\\n') }}\n",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        1520,
+        320
+      ],
+      "id": "214be00b-fb42-407c-952e-f21513d190cf",
+      "name": "Basic LLM Chain2",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "model": "gemma2:9b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        1520,
+        496
+      ],
+      "id": "e7c32c26-d185-47fc-bb99-35dcd5587b6d",
+      "name": "Ollama Chat Model2",
+      "executeOnce": false,
+      "credentials": {
+        "ollamaApi": {
+          "id": "lpkQ0mh5FtzNiBQH",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5b586aba-6310-4ed5-80ec-f2565a9dc28e",
+              "name": "title",
+              "value": "={{ $json.title }}",
+              "type": "string"
+            },
+            {
+              "id": "dd6db849-5cd0-48e2-b167-a54361f78337",
+              "name": "link",
+              "value": "={{ $json.link }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        48,
+        576
+      ],
+      "id": "3b22a623-0416-4ea8-907e-537e48192aa7",
+      "name": "Edit Fields3"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "lista_noticias",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        240,
+        576
+      ],
+      "id": "aaf5fbc4-e3af-4803-a8db-d69762b4e9ba",
+      "name": "Aggregate3"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Act as an expert news editor. Analyze the following list of international news and select only the 10 most important ones based on global impact, political relevance, or significant human interest.\nFormatting instructions:\n1. Select exactly 10 news items.\n2. Do not enumerate each item.\n3. For each item, list the title followed by its link on the immediate line below.\n4. Separate each news block with a single blank line.\n5. Provide only the list. Do not include introductions, conclusions, or additional commentary.\nHere is the list of news:\n{{ $json.lista_noticias.map(item => item.title + \"-\" + item.link).join('\\n') }}\n",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        448,
+        576
+      ],
+      "id": "cc6e40fc-77b3-4ff3-a80a-9e6d06f238c2",
+      "name": "Basic LLM Chain3",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "model": "llama3.1:8b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        448,
+        752
+      ],
+      "id": "5b9a4322-3458-4e51-b517-f469a1ae1b3f",
+      "name": "Ollama Chat Model3",
+      "credentials": {
+        "ollamaApi": {
+          "id": "lpkQ0mh5FtzNiBQH",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2176,
+        880
+      ],
+      "id": "0d1da13f-de89-4e07-8f58-4f464d6f2f53",
+      "name": "Merge1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5b586aba-6310-4ed5-80ec-f2565a9dc28e",
+              "name": "title",
+              "value": "={{ $json.title }}",
+              "type": "string"
+            },
+            {
+              "id": "dd6db849-5cd0-48e2-b167-a54361f78337",
+              "name": "link",
+              "value": "={{ $json.link }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        32,
+        912
+      ],
+      "id": "d0a3ac10-7f5d-4410-b4ec-784d6eb8a0b5",
+      "name": "Edit Fields4"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "lista_noticias",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        224,
+        912
+      ],
+      "id": "ed092fa7-8200-4891-9f19-def5a64e94e4",
+      "name": "Aggregate4"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Act as a specialized science and tehcnology editor. Analyze the following list of news and select only the 10 most important ones based on scientific breakthrough, technical innovation, practical impact on society or industry and reliability and non sensationalist value.\nFormatting instructions:\n1. Select exactly 10 news items.\n2. Do not enumerate each item.\n3. For each item, list the title followed by its link on the immediate line below.\n4. Separate each news block with a single blank line.\n5. Provide only the list. Do not include introductions, conclusions, or additional commentary.\nHere is the list of news:\n{{ $json.lista_noticias.map(item => item.title + \"-\" + item.link).join('\\n') }}",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        448,
+        912
+      ],
+      "id": "0e6bae6b-4e93-4a78-b0cc-a37b86ca05e6",
+      "name": "Basic LLM Chain4",
+      "executeOnce": true
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        992,
+        1312
+      ],
+      "id": "f06c7e7e-4e97-4e4c-8cb8-b2b140f99b23",
+      "name": "Merge2"
+    },
+    {
+      "parameters": {
+        "model": "llama3.1:8b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        448,
+        1088
+      ],
+      "id": "842343df-9a8e-440d-8bc5-c4fc0396d7e4",
+      "name": "Ollama Chat Model4",
+      "credentials": {
+        "ollamaApi": {
+          "id": "lpkQ0mh5FtzNiBQH",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5b586aba-6310-4ed5-80ec-f2565a9dc28e",
+              "name": "title",
+              "value": "={{ $json.title }}",
+              "type": "string"
+            },
+            {
+              "id": "dd6db849-5cd0-48e2-b167-a54361f78337",
+              "name": "link",
+              "value": "={{ $json.link }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        16,
+        1216
+      ],
+      "id": "a470849e-3db1-4f2a-a7a1-ef894fe2752e",
+      "name": "Edit Fields5"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "lista_noticias",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        208,
+        1216
+      ],
+      "id": "d5ff06a9-6c6b-4647-b359-37cdd2a9815f",
+      "name": "Aggregate5"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Act as a specialized science and tehcnology editor. Analyze the following list of news and select only the 10 most important ones based on scientific breakthrough, technical innovation, practical impact on society or industry and reliability and non sensationalist value.\nFormatting instructions:\n1. Select exactly 10 news items.\n2. Do not enumerate each item.\n3. For each item, list the title followed by its link on the immediate line below.\n4. Separate each news block with a single blank line.\n5. Provide only the list. Do not include introductions, conclusions, or additional commentary.\nHere is the list of news:\n{{ $json.lista_noticias.map(item => item.title + \"-\" + item.link).join('\\n') }}",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        432,
+        1216
+      ],
+      "id": "cb62dcbe-df2c-4342-a709-f97155a640d0",
+      "name": "Basic LLM Chain5",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "model": "llama3.1:8b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        432,
+        1392
+      ],
+      "id": "ee3cd078-ab06-4aa7-a80b-8900b063af3e",
+      "name": "Ollama Chat Model5",
+      "credentials": {
+        "ollamaApi": {
+          "id": "lpkQ0mh5FtzNiBQH",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a6788692-ed2e-425d-90c3-30e353d0d6a9",
+              "name": "noticias_merged",
+              "value": "={{ $json.text + \"\\n\\n\" + $json.text1 + \"\\n\\n\" + $json.text2 }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1184,
+        1312
+      ],
+      "id": "c835308c-53d3-4472-b0e5-d8cb9e164742",
+      "name": "Edit Fields6"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "lista_noticias_todas",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        1376,
+        1312
+      ],
+      "id": "90f9d149-2997-43b9-9a50-c14b8f857bf4",
+      "name": "Aggregate6"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Act as a specialized science and tehcnology editor. Analyze the following list of news and select only the 10 most important ones based on scientific breakthrough, technical innovation, practical impact on society or industry and reliability and non sensationalist value.\nOutput requirements:\n​1. Header Spacing: Start your response exactly with: \"These are the top 10 most important news:\". Follow this phrase with two HTML line break tags (<br><br>).\n​2. Professional Numbered List: Use an HTML ordered list (<ol>) to format the stories. Wrap each individual news item inside <li> tags.\n​3. Internal Item Layout: Inside each <li>, format the content as follows:\n[Title of the news] > <a href=\"URL\" style=\"color: #1a73e8; text-decoration: none; font-weight: bold;\">[Read more]</a>\n​4. Spacing: Add a margin-bottom: 15px; to each <li> tag to ensure there is enough white space between the different news stories.\n​5. Clean Links: Use \"[Read more]\" as the anchor text. Do not display raw URLs or the word \"Link:\".\n6. Final Spacing: After closing the ordered list (</ol>), add two HTML line break tags (<br><br>) to create whitespace at the end of the response.\nHere is the list of news:\n{{ $json.lista_noticias_todas.map(item => item.noticias_merged).join('\\n\\n---\\n\\n') }}\n",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        1552,
+        1312
+      ],
+      "id": "8a9b8e2e-e82a-48ac-9981-8380d16691d1",
+      "name": "Basic LLM Chain6",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "model": "gemma2:9b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        1552,
+        1504
+      ],
+      "id": "b4d04103-62f2-4f9e-920e-88e5a0ddaf67",
+      "name": "Ollama Chat Model6",
+      "executeOnce": false,
+      "credentials": {
+        "ollamaApi": {
+          "id": "lpkQ0mh5FtzNiBQH",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://www.newscientist.com/feed/home/",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        -144,
+        1216
+      ],
+      "id": "ac991786-7651-4dfc-a16c-cf26c76ad6c9",
+      "name": "RSS News Scientist"
+    },
+    {
+      "parameters": {
+        "url": "https://www.sciencedaily.com/rss/all.xml",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        -128,
+        912
+      ],
+      "id": "aeef4681-53a1-4026-86b1-135317c440b0",
+      "name": "RSS Read Science Daily"
+    },
+    {
+      "parameters": {
+        "sendTo": "rbo5672@gmail.com",
+        "subject": "=Top News Today - {{ $today.format('dd-MM-yyyy') }}",
+        "message": "={{ $json.text }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2592,
+        848
+      ],
+      "id": "eb25ed8e-25af-4cc5-9a3d-bba37c922d06",
+      "name": "Send a message",
+      "webhookId": "1d0ea21c-e34f-47c8-8903-27ffeb750fe7",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "q3Jcnz3lOEYZgPKX",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nlet htmlFinal = \"\";\n\nfunction getListItems(text) {\n  const matches = text.match(/<li[\\s\\S]*?<\\/li>/g);\n  return matches ? matches.join(\"\"):\"\";\n}\n\nhtmlFinal += \"<strong>International News</strong><br><br>\";\nhtmlFinal += \"<ol style='margin-left:20px;'>\"\nhtmlFinal += getListItems(items[0].json.text);\nhtmlFinal += \"</ol><br><br>\";\n\nhtmlFinal += \"<strong>Science and Technology News</strong><br><br>\";\nhtmlFinal += \"<ol style='margin-left:20px;'>\"\nhtmlFinal += getListItems(items[1].json.text);\nhtmlFinal += \"</ol><br><br>\";\n\nreturn { text: htmlFinal}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2384,
+        848
+      ],
+      "id": "6c1cf8a7-1e95-4abc-b6db-b4f246ed49b3",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "url": "https://feeds.bbci.co.uk/news/world/rss.xml",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        -112,
+        -16
+      ],
+      "id": "7dea085b-2a4e-4ed8-9a51-0d95732b03e1",
+      "name": "RSS Read BBC1"
+    },
+    {
+      "parameters": {
+        "url": "https://feeds.npr.org/1001/rss.xml",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        -96,
+        576
+      ],
+      "id": "6bcdf88f-5282-43b1-b3b5-6e3a821ee913",
+      "name": "RSS Read NPR"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "RSS Read BBC1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "RSS Read NYT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RSS Read NYT": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Aggregate2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate2": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain1": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          },
+          {
+            "node": "RSS Read NPR",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields2": {
+      "main": [
+        [
+          {
+            "node": "Aggregate1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate1": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain2",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain2": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "RSS Read Science Daily",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields3": {
+      "main": [
+        [
+          {
+            "node": "Aggregate3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate3": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model3": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain3",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain3": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Edit Fields4": {
+      "main": [
+        [
+          {
+            "node": "Aggregate4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate4": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain4": {
+      "main": [
+        [
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "RSS News Scientist",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model4": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain4",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields5": {
+      "main": [
+        [
+          {
+            "node": "Aggregate5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate5": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain5": {
+      "main": [
+        [
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model5": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain5",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields6": {
+      "main": [
+        [
+          {
+            "node": "Aggregate6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate6": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model6": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain6",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge2": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain6": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "RSS News Scientist": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RSS Read Science Daily": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RSS Read BBC1": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RSS Read NPR": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "timezone": "America/Mexico_City",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "3a6b1fc2-9cef-4c75-b2b1-02741a91b7d4",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "1aef7ee72d446b1874a94dbdef55b82361f771d2b657cb8544c791cfff89bee0"
+  },
+  "id": "RHGZs0llN4G8fyQB",
+  "tags": []
+}
