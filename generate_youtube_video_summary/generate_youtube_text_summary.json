@@ -1,0 +1,204 @@
+{
+  "name": "Youtube video summary using whisper and local AI",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "youtube-to-whisper",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -192,
+        -48
+      ],
+      "id": "cab5ed54-7b6b-4faa-a4a3-de85a77dbc48",
+      "name": "Webhook",
+      "webhookId": "a310a091-6e00-4949-825d-29052c0ec592"
+    },
+    {
+      "parameters": {
+        "command": "=/home/orangepi/Downloads/whisper.cpp/build/bin/whisper-cli -t 12 -m /home/orangepi/Downloads/whisper.cpp/models/ggml-base.bin -f \"/DATA/AppData/n8n/transfer/{{ $node[\"Webhook\"].json.body.id }}.wav\" --language es --output-txt"
+      },
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
+      "position": [
+        240,
+        -48
+      ],
+      "id": "991d2b08-0e33-4c35-8379-b2dc525c7bfa",
+      "name": "Execute a whisper to transcribe",
+      "credentials": {
+        "sshPassword": {
+          "id": "udsTNbOBH12WnKzu",
+          "name": "SSH Password account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "command": "=yt-dlp -f \"ba[language=es]/ba\" --max-downloads 1 --no-playlist -x --audio-format wav --postprocessor-args \"ffmpeg:-ar 16000 -ac 1\" -o \"/DATA/AppData/n8n/transfer/{{ $json.body.id }}.wav\" \"{{ $json.body.url }}\""
+      },
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
+      "position": [
+        48,
+        -48
+      ],
+      "id": "b09c38f4-82af-45ee-b42c-92d30ad8adba",
+      "name": "Execute download audio from youtube video",
+      "credentials": {
+        "sshPassword": {
+          "id": "udsTNbOBH12WnKzu",
+          "name": "SSH Password account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fileSelector": "=/home/node/.n8n-files/{{ $node[\"Webhook\"].json.body.id }}.wav.txt",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        448,
+        -48
+      ],
+      "id": "2c25fd11-a88d-4132-94b0-bf841688c7f0",
+      "name": "Read/Write Files from Disk"
+    },
+    {
+      "parameters": {
+        "operation": "text",
+        "destinationKey": "output_data",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        656,
+        -48
+      ],
+      "id": "75ee0d5f-754b-432f-8397-41c3564aab93",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=El siguiente texto es una transcripcion de un video de youtube sobre finanzas personals. Resume de que trata el siguiente texto:\n {{ $json.output_data }}",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        864,
+        -48
+      ],
+      "id": "bec74fb9-7894-4cc9-abf4-0904af928f84",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "model": "gemma2:9b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        864,
+        160
+      ],
+      "id": "b810c799-3ff7-4302-9f09-01d962c0d4b8",
+      "name": "Ollama Chat Model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "lpkQ0mh5FtzNiBQH",
+          "name": "Ollama account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Execute download audio from youtube video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute download audio from youtube video": {
+      "main": [
+        [
+          {
+            "node": "Execute a whisper to transcribe",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a whisper to transcribe": {
+      "main": [
+        [
+          {
+            "node": "Read/Write Files from Disk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read/Write Files from Disk": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "f0c1bb89-41ad-4f03-a806-d0cdb3fd68a8",
+  "meta": {
+    "instanceId": "1aef7ee72d446b1874a94dbdef55b82361f771d2b657cb8544c791cfff89bee0"
+  },
+  "id": "eNa1LESn3bStVeGt",
+  "tags": []
+}
