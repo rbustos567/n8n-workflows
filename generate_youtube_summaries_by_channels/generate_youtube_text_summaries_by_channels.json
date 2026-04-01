@@ -1,0 +1,618 @@
+{
+  "name": "Generate summary of recent youtube videos from list channels",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {}
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -2336,
+        64
+      ],
+      "id": "516d4775-5043-46cf-bd7b-b21b59e09af4",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "69979f98-3a67-4a3d-8597-740fc63ef000",
+              "leftValue": "={{ $('Loop Over Items').item.json.status }}",
+              "rightValue": "pendiente",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -400,
+        528
+      ],
+      "id": "1e5459d9-3f29-49b1-ab99-d1ba1b66a49f",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "command": "=yt-dlp --playlist-end 3 --max-downloads 3 --print '{\"link\":\"%(id)s\",\"fecha\":\"%(upload_date)s,\"titulo\":\"%(title)s\"}' --no-download https://www.youtube.com/@{{ $node[\"Loop Over Items1\"].json[\"canal\"]}}"
+      },
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
+      "position": [
+        -864,
+        64
+      ],
+      "id": "aec29046-ff0e-4bb7-b6fd-15684296eb57",
+      "name": "Execute obtain list recent videos",
+      "credentials": {
+        "sshPassword": {
+          "id": "udsTNbOBH12WnKzu",
+          "name": "SSH Password account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Dividimos por líneas y quitamos las vacías\nconst rawLines = $json.stdout.split('\\n').filter(l => l.trim() !== \"\");\n\nreturn rawLines.map(line => {\n  try {\n    // Intentamos el parseo normal\n    const data = JSON.parse(line.trim());\n    return {\n      json: {\n        link: data.link,\n        fecha: data.fecha ? data.fecha.replace(',','').trim(): \"\",\n        titulo: data.titulo\n      }\n    };\n  } catch (e) {\n    // Si falla por las comillas del título, intentamos una \"limpieza de emergencia\"\n    // Buscamos lo que hay entre \"titulo\":\" y el final del objeto\n    try {\n        const linkMatch = line.match(/\"link\":\"(.*?)\"/);\n        const fechaMatch = line.match(/\"fecha\":\"(.*?)\"/);\n        const tituloMatch = line.match(/\"titulo\":\"(.*)\"}/);\n\n        return {\n          json: {\n            link: linkMatch ? linkMatch[1] : \"n/a\",\n            fecha: fechaMatch ? fechaMatch[1].replace(',','').trim() : \"n/a\",\n            titulo: tituloMatch ? tituloMatch[1].replace(/\\\\\"/g, '\"') : \"Error en título\"\n          }\n        };\n    } catch (err) {\n        return { json: { status: \"error_total\", raw: line } };\n    }\n  }\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -608,
+        64
+      ],
+      "id": "23643c1b-fbfe-4f5c-8ebe-40d2e74f3aaf",
+      "name": "Format list"
+    },
+    {
+      "parameters": {
+        "command": "=if [ -d \"/DATA/AppData/n8n/youtube_videos_summaries/{{ $(\"Loop Over Items1\").item.json.canal }}/{{$json.fecha}}_{{$json.link}}\" ]; then\n  echo '{\"status\":\"existe\",\"link\":\"{{$json.link}}\",\"fecha\":\"{{$json.fecha}}\"}'\nelse\n  echo '{\"status\":\"pendiente\",\"link\":\"{{$json.link}}\",\"fecha\":\"{{$json.fecha}}\"}'\nfi"
+      },
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
+      "position": [
+        -368,
+        64
+      ],
+      "id": "a156938a-1357-4bb9-b352-eba6d478f55d",
+      "name": "Execute check list in local disk",
+      "credentials": {
+        "sshPassword": {
+          "id": "udsTNbOBH12WnKzu",
+          "name": "SSH Password account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const rawStdout = $json.stdout;\n\ntry {\n  const data = JSON.parse(rawStdout);\n  return {\n    status: data.status,\n    link: data.link,\n    fecha: data.fecha\n  };\n} catch (e) {\n  return {\n    status: \"error\",\n    error: e.message\n  };\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -144,
+        64
+      ],
+      "id": "8542cf4a-7e6b-4bcd-b9e5-d49cff27ae40",
+      "name": "Format list of pending and done"
+    },
+    {
+      "parameters": {
+        "command": "=yt-dlp -f \"ba[language=es]/ba\" --max-downloads 1 --no-playlist -x --audio-format wav --postprocessor-args \"ffmpeg:-ar 16000 -ac 1\" -o \"/DATA/AppData/n8n/transfer/{{ $json.link }}.wav\" \"https://www.youtube.com/watch?v={{$json.link}}\""
+      },
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
+      "position": [
+        -32,
+        448
+      ],
+      "id": "c8c28c7d-dc69-4d93-8b80-3521c40765e2",
+      "name": "Execute download audio from youtube video",
+      "credentials": {
+        "sshPassword": {
+          "id": "udsTNbOBH12WnKzu",
+          "name": "SSH Password account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "command": "=/home/orangepi/Downloads/whisper.cpp/build/bin/whisper-cli -t 12 -m /home/orangepi/Downloads/whisper.cpp/models/ggml-base.bin -f \"/DATA/AppData/n8n/transfer/{{ $node[\"Loop Over Items\"].json[\"link\"]}}.wav\" --language es --output-txt"
+      },
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
+      "position": [
+        176,
+        448
+      ],
+      "id": "90ecb60a-8be4-408b-970a-3ce2cc8f3514",
+      "name": "Execute a whisper to transcribe",
+      "credentials": {
+        "sshPassword": {
+          "id": "udsTNbOBH12WnKzu",
+          "name": "SSH Password account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fileSelector": "=/home/node/.n8n-files/{{ $node[\"Loop Over Items\"].json[\"link\"]}}.wav.txt",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        384,
+        448
+      ],
+      "id": "3cbd82d1-d032-4fbf-b666-543ae3123ae1",
+      "name": "Read/Write Files from Disk"
+    },
+    {
+      "parameters": {
+        "operation": "text",
+        "destinationKey": "output_data",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        576,
+        448
+      ],
+      "id": "827f27c2-30c2-4991-bc7f-48ef5e870437",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=El siguiente texto es una transcripcion de un video de youtube sobre finanzas personales. Resume de que trata el siguiente texto:\n {{ $json.output_data }}",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        784,
+        448
+      ],
+      "id": "c4d8ce96-7101-4459-9dbc-06ba98b00155",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "command": "=FOLDER_PATH=\"/DATA/AppData/n8n/youtube_videos_summaries/{{ $node[\"Loop Over Items\"].json[\"canal\"]}}/{{ $node[\"Loop Over Items\"].json[\"fecha\"]}}_{{ $node[\"Loop Over Items\"].json[\"link\"]}}\"\n\nmkdir -p \"$FOLDER_PATH\"\n\necho \"{{ $json.text }}\" > \"$FOLDER_PATH/resumen.txt\"\n\nmv \"/DATA/AppData/n8n/transfer/{{$node[\"Loop Over Items\"].json[\"link\"]}}.wav.txt\" \"$FOLDER_PATH/transcripcion_completa.txt\"\n\nrm -f \"/DATA/AppData/n8n/transfer/*.wav\""
+      },
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
+      "position": [
+        1184,
+        688
+      ],
+      "id": "4e01ac7c-1a74-4a76-83fc-2d59fc337208",
+      "name": "Execute store results",
+      "credentials": {
+        "sshPassword": {
+          "id": "udsTNbOBH12WnKzu",
+          "name": "SSH Password account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "gemma2:9b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        784,
+        640
+      ],
+      "id": "29293245-8a6f-4b2f-9fef-7d4bd23c48d8",
+      "name": "Ollama Chat Model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "lpkQ0mh5FtzNiBQH",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fileSelector": "=/home/node/.n8n-files/lista_canales.txt",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        -2144,
+        64
+      ],
+      "id": "84ca0b23-fd30-45ec-a899-fe796debf292",
+      "name": "Read/Write Files from Disk1"
+    },
+    {
+      "parameters": {
+        "operation": "text",
+        "destinationKey": "output_data",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        -1920,
+        64
+      ],
+      "id": "03961680-5308-46f3-b96e-1ec1dd9d9411",
+      "name": "Extract from File1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const rawText = items[0].json.output_data|| \"\";\n\nconst lines = rawText.split(/\\r?\\n/).map(line=>line.trim()).filter(line =>line!==\"\")\n\nreturn lines.map(line => {\n  return {\n    json: {\n      canal:line\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1712,
+        64
+      ],
+      "id": "825c0dc9-4a2c-4825-a20b-3d931ea2bac7",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -1376,
+        416
+      ],
+      "id": "0f1a59d6-ff71-4682-b4a5-4ff2018a0b10",
+      "name": "Loop Over Items1"
+    },
+    {
+      "parameters": {
+        "command": "=if [ ! -d \"/DATA/AppData/n8n/youtube_videos_summaries/{{ $node[\"Loop Over Items1\"].json[\"canal\"]}}\" ]; then\n  mkdir -p \"/DATA/AppData/n8n/youtube_videos_summaries/{{ $node[\"Loop Over Items1\"].json[\"canal\"]}}\"\nfi"
+      },
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
+      "position": [
+        -1152,
+        64
+      ],
+      "id": "bb8ae95b-9079-4ed0-9d37-1ff47f816a71",
+      "name": "Execute create channel dir",
+      "credentials": {
+        "sshPassword": {
+          "id": "udsTNbOBH12WnKzu",
+          "name": "SSH Password account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "reset": "={{ $itemIndex }}"
+        }
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -752,
+        384
+      ],
+      "id": "4f7a0fe6-17a8-4fb6-a5ca-096c2c6a86ad",
+      "name": "Loop Over Items",
+      "notesInFlow": false
+    },
+    {
+      "parameters": {
+        "jsCode": "let masterList = $getWorkflowStaticData('global').masterList||[];\n\nconst currentVideos = $input.all();\n\ncurrentVideos.forEach(item => {\n  masterList.push({\n    json: {\n      status:item.json.status,\n      link:item.json.link,\n      fecha:item.json.fecha,\n      canal:$node[\"Loop Over Items1\"].json.canal\n    }\n  });\n});\n\n$getWorkflowStaticData('global').masterList = masterList\n\nreturn currentVideos;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        48,
+        144
+      ],
+      "id": "b7ee776b-bd88-46ed-a3a2-1fc469123d31",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "jsCode": "return $getWorkflowStaticData('global').masterList||[];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1056,
+        400
+      ],
+      "id": "f39a84a9-7a91-4339-b8ef-0f0e47057554",
+      "name": "Obtain global data"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Read/Write Files from Disk1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Execute download audio from youtube video",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute obtain list recent videos": {
+      "main": [
+        [
+          {
+            "node": "Format list",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format list": {
+      "main": [
+        [
+          {
+            "node": "Execute check list in local disk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute check list in local disk": {
+      "main": [
+        [
+          {
+            "node": "Format list of pending and done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format list of pending and done": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute download audio from youtube video": {
+      "main": [
+        [
+          {
+            "node": "Execute a whisper to transcribe",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a whisper to transcribe": {
+      "main": [
+        [
+          {
+            "node": "Read/Write Files from Disk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read/Write Files from Disk": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Execute store results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute store results": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read/Write Files from Disk1": {
+      "main": [
+        [
+          {
+            "node": "Extract from File1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items1": {
+      "main": [
+        [
+          {
+            "node": "Obtain global data",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Execute create channel dir",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute create channel dir": {
+      "main": [
+        [
+          {
+            "node": "Execute obtain list recent videos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtain global data": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "a41e5dbf-c94f-4005-b9ca-ed52bc8bcd5b",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "1aef7ee72d446b1874a94dbdef55b82361f771d2b657cb8544c791cfff89bee0"
+  },
+  "id": "RrrlSB4xyhqAasWv",
+  "tags": []
+}
