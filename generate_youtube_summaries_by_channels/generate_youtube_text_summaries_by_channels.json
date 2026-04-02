@@ -30,7 +30,7 @@
           "conditions": [
             {
               "id": "69979f98-3a67-4a3d-8597-740fc63ef000",
-              "leftValue": "={{ $('Loop Over Items').item.json.status }}",
+              "leftValue": "={{ $json.status }}",
               "rightValue": "pendiente",
               "operator": {
                 "type": "string",
@@ -53,7 +53,7 @@
     },
     {
       "parameters": {
-        "command": "=yt-dlp --playlist-end 3 --max-downloads 3 --print '{\"link\":\"%(id)s\",\"fecha\":\"%(upload_date)s,\"titulo\":\"%(title)s\"}' --no-download https://www.youtube.com/@{{ $node[\"Loop Over Items1\"].json[\"canal\"]}}"
+        "command": "=yt-dlp --playlist-end 3 --max-downloads 3 --print '{\"link\":\"%(id)s\",\"fecha\":\"%(upload_date)s,\"titulo\":\"%(title)s\",\"canal\":\"{{ $node[\"Loop Over Items1\"].json[\"canal\"]}}\"}' --no-download https://www.youtube.com/@{{ $node[\"Loop Over Items1\"].json[\"canal\"]}}"
       },
       "type": "n8n-nodes-base.ssh",
       "typeVersion": 1,
@@ -72,7 +72,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// 1. Dividimos por líneas y quitamos las vacías\nconst rawLines = $json.stdout.split('\\n').filter(l => l.trim() !== \"\");\n\nreturn rawLines.map(line => {\n  try {\n    // Intentamos el parseo normal\n    const data = JSON.parse(line.trim());\n    return {\n      json: {\n        link: data.link,\n        fecha: data.fecha ? data.fecha.replace(',','').trim(): \"\",\n        titulo: data.titulo\n      }\n    };\n  } catch (e) {\n    // Si falla por las comillas del título, intentamos una \"limpieza de emergencia\"\n    // Buscamos lo que hay entre \"titulo\":\" y el final del objeto\n    try {\n        const linkMatch = line.match(/\"link\":\"(.*?)\"/);\n        const fechaMatch = line.match(/\"fecha\":\"(.*?)\"/);\n        const tituloMatch = line.match(/\"titulo\":\"(.*)\"}/);\n\n        return {\n          json: {\n            link: linkMatch ? linkMatch[1] : \"n/a\",\n            fecha: fechaMatch ? fechaMatch[1].replace(',','').trim() : \"n/a\",\n            titulo: tituloMatch ? tituloMatch[1].replace(/\\\\\"/g, '\"') : \"Error en título\"\n          }\n        };\n    } catch (err) {\n        return { json: { status: \"error_total\", raw: line } };\n    }\n  }\n});"
+        "jsCode": "// 1. Dividimos por líneas y quitamos las vacías\nconst rawLines = $json.stdout.split('\\n').filter(l => l.trim() !== \"\");\n\nreturn rawLines.map(line => {\n  try {\n    // Intentamos el parseo normal\n    const data = JSON.parse(line.trim());\n    return {\n      json: {\n        link: data.link,\n        fecha: data.fecha ? data.fecha.replace(',','').trim(): \"\",\n        titulo: data.titulo,\n        canal: data.canal\n      }\n    };\n  } catch (e) {\n    // Si falla por las comillas del título, intentamos una \"limpieza de emergencia\"\n    // Buscamos lo que hay entre \"titulo\":\" y el final del objeto\n    try {\n        const linkMatch = line.match(/\"link\":\"(.*?)\"/);\n        const fechaMatch = line.match(/\"fecha\":\"(.*?)\"/);\n        const tituloMatch = line.match(/\"titulo\":\"(.*)\"}/);\n        const canalMatch = line.match(/\"canal\":\"(.*)\"}/);\n\n        return {\n          json: {\n            link: linkMatch ? linkMatch[1] : \"n/a\",\n            fecha: fechaMatch ? fechaMatch[1].replace(',','').trim() : \"n/a\",\n            titulo: tituloMatch ? tituloMatch[1].replace(/\\\\\"/g, '\"') : \"Error en título\",\n            canal: canalMatch ? canalMatch[1] : \"n/a\"\n          }\n        };\n    } catch (err) {\n        return { json: { status: \"error_total\", raw: line } };\n    }\n  }\n});"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -85,7 +85,7 @@
     },
     {
       "parameters": {
-        "command": "=if [ -d \"/DATA/AppData/n8n/youtube_videos_summaries/{{ $(\"Loop Over Items1\").item.json.canal }}/{{$json.fecha}}_{{$json.link}}\" ]; then\n  echo '{\"status\":\"existe\",\"link\":\"{{$json.link}}\",\"fecha\":\"{{$json.fecha}}\"}'\nelse\n  echo '{\"status\":\"pendiente\",\"link\":\"{{$json.link}}\",\"fecha\":\"{{$json.fecha}}\"}'\nfi"
+        "command": "=if [ -f \"/DATA/AppData/n8n/youtube_videos_summaries/{{ $json.canal}}/{{$json.fecha}}/{{$json.link}}/resumen.txt\" ]; then\n  echo '{\"status\":\"existe\",\"link\":\"{{$json.link}}\",\"fecha\":\"{{$json.fecha}}\",\"titulo\":\"{{ $json.titulo }}\",\"canal\":\"{{ $json.canal }}\"}'\nelse\n  echo '{\"status\":\"pendiente\",\"link\":\"{{$json.link}}\",\"fecha\":\"{{$json.fecha}}\",\"titulo\":\"{{ $json.titulo }}\",\"canal\":\"{{ $json.canal }}\"}'\nfi"
       },
       "type": "n8n-nodes-base.ssh",
       "typeVersion": 1,
@@ -105,7 +105,7 @@
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const rawStdout = $json.stdout;\n\ntry {\n  const data = JSON.parse(rawStdout);\n  return {\n    status: data.status,\n    link: data.link,\n    fecha: data.fecha\n  };\n} catch (e) {\n  return {\n    status: \"error\",\n    error: e.message\n  };\n}"
+        "jsCode": "const rawStdout = $json.stdout;\n\ntry {\n  const data = JSON.parse(rawStdout);\n  return {\n    status: data.status,\n    link: data.link,\n    fecha: data.fecha,\n    titulo: data.titulo,\n    canal: data.canal\n  };\n} catch (e) {\n  return {\n    status: \"error\",\n    error: e.message\n  };\n}"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -118,7 +118,7 @@
     },
     {
       "parameters": {
-        "command": "=yt-dlp -f \"ba[language=es]/ba\" --max-downloads 1 --no-playlist -x --audio-format wav --postprocessor-args \"ffmpeg:-ar 16000 -ac 1\" -o \"/DATA/AppData/n8n/transfer/{{ $json.link }}.wav\" \"https://www.youtube.com/watch?v={{$json.link}}\""
+        "command": "=yt-dlp -f \"ba[language=es]/ba\" --max-downloads 1 --no-playlist -x --audio-format wav --postprocessor-args \"ffmpeg:-ar 16000 -ac 1\" -o \"/DATA/AppData/n8n/transfer/{{ $node[\"If\"].json[\"link\"] }}.wav\" \"https://www.youtube.com/watch?v={{ $node[\"If\"].json[\"link\"] }}\""
       },
       "type": "n8n-nodes-base.ssh",
       "typeVersion": 1,
@@ -137,7 +137,7 @@
     },
     {
       "parameters": {
-        "command": "=/home/orangepi/Downloads/whisper.cpp/build/bin/whisper-cli -t 12 -m /home/orangepi/Downloads/whisper.cpp/models/ggml-base.bin -f \"/DATA/AppData/n8n/transfer/{{ $node[\"Loop Over Items\"].json[\"link\"]}}.wav\" --language es --output-txt"
+        "command": "=/home/orangepi/Downloads/whisper.cpp/build/bin/whisper-cli -t 12 -m /home/orangepi/Downloads/whisper.cpp/models/ggml-small.bin -f \"/DATA/AppData/n8n/transfer/{{ $node[\"If\"].json[\"link\"] }}.wav\" --language es --output-txt"
       },
       "type": "n8n-nodes-base.ssh",
       "typeVersion": 1,
@@ -156,7 +156,7 @@
     },
     {
       "parameters": {
-        "fileSelector": "=/home/node/.n8n-files/{{ $node[\"Loop Over Items\"].json[\"link\"]}}.wav.txt",
+        "fileSelector": "=/home/node/.n8n-files/{{ $node[\"If\"].json[\"link\"] }}.wav.txt",
         "options": {}
       },
       "type": "n8n-nodes-base.readWriteFile",
@@ -186,7 +186,7 @@
     {
       "parameters": {
         "promptType": "define",
-        "text": "=El siguiente texto es una transcripcion de un video de youtube sobre finanzas personales. Resume de que trata el siguiente texto:\n {{ $json.output_data }}",
+        "text": "=<start_of_turn>user\nEres un asistente experto en síntesis de contenido. Tu objetivo es generar un resumen detallado del siguiente texto de un video de YouTube.\n\nREGLAS DE OBLIGATORIO CUMPLIMIENTO:\n1. Responde ÚNICAMENTE en idioma ESPAÑOL. Está terminantemente prohibido usar inglés en la respuesta, incluso si el texto original contiene tecnicismos.\n2. Si el texto menciona términos tecnológicos, explícalos en español o mantenlos como nombres propios pero rodeados de contexto en español.\n3. Mantén un tono profesional y directo.\n\nESTRUCTURA DEL RESUMEN:\n- TÍTULO: (Crea un título descriptivo en español)\n- RESUMEN GENERAL: (Un párrafo de 3 a 5 líneas)\n- PUNTOS CLAVE: (Lista de bullets con lo más importante)\n\nTEXTO DEL VIDEO:\n{{ $json.output_data }}\n<end_of_turn>\n<start_of_turn>model\nResumen en español:",
         "batching": {}
       },
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
@@ -200,12 +200,12 @@
     },
     {
       "parameters": {
-        "command": "=FOLDER_PATH=\"/DATA/AppData/n8n/youtube_videos_summaries/{{ $node[\"Loop Over Items\"].json[\"canal\"]}}/{{ $node[\"Loop Over Items\"].json[\"fecha\"]}}_{{ $node[\"Loop Over Items\"].json[\"link\"]}}\"\n\nmkdir -p \"$FOLDER_PATH\"\n\necho \"{{ $json.text }}\" > \"$FOLDER_PATH/resumen.txt\"\n\nmv \"/DATA/AppData/n8n/transfer/{{$node[\"Loop Over Items\"].json[\"link\"]}}.wav.txt\" \"$FOLDER_PATH/transcripcion_completa.txt\"\n\nrm -f \"/DATA/AppData/n8n/transfer/*.wav\""
+        "command": "=FOLDER_PATH=\"/DATA/AppData/n8n/youtube_videos_summaries/{{ $node[\"If\"].json[\"canal\"] }}/{{ $node[\"If\"].json[\"fecha\"] }}/{{ $node[\"If\"].json[\"link\"] }}\"\n\nmkdir -p \"$FOLDER_PATH\"\n\necho \"{{ $node[\"If\"].json[\"canal\"] }} - {{ $node[\"If\"].json[\"titulo\"] }} - {{ $node[\"If\"].json[\"fecha\"] }}\n\n{{ $json.text }}\" > \"$FOLDER_PATH/resumen.txt\"\n\nmv \"/DATA/AppData/n8n/transfer/{{ $node[\"If\"].json[\"link\"] }}.wav.txt\" \"$FOLDER_PATH/transcripcion_completa.txt\"\n\nrm -f \"/DATA/AppData/n8n/transfer/{{ $node[\"If\"].json[\"link\"] }}.wav\""
       },
       "type": "n8n-nodes-base.ssh",
       "typeVersion": 1,
       "position": [
-        1184,
+        1280,
         688
       ],
       "id": "4e01ac7c-1a74-4a76-83fc-2d59fc337208",
@@ -329,7 +329,7 @@
     },
     {
       "parameters": {
-        "jsCode": "let masterList = $getWorkflowStaticData('global').masterList||[];\n\nconst currentVideos = $input.all();\n\ncurrentVideos.forEach(item => {\n  masterList.push({\n    json: {\n      status:item.json.status,\n      link:item.json.link,\n      fecha:item.json.fecha,\n      canal:$node[\"Loop Over Items1\"].json.canal\n    }\n  });\n});\n\n$getWorkflowStaticData('global').masterList = masterList\n\nreturn currentVideos;\n"
+        "jsCode": "let masterList = $getWorkflowStaticData('global').masterList||[];\n\nconst currentVideos = $input.all();\n\ncurrentVideos.forEach(item => {\n  masterList.push({\n    json: {\n      status:item.json.status,\n      link:item.json.link,\n      fecha:item.json.fecha,\n      titulo:item.json.titulo,\n      canal:item.json.canal\n    }\n  });\n});\n\n$getWorkflowStaticData('global').masterList = masterList\n\nreturn currentVideos;\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -352,6 +352,30 @@
       ],
       "id": "f39a84a9-7a91-4339-b8ef-0f0e47057554",
       "name": "Obtain global data"
+    },
+    {
+      "parameters": {
+        "sendTo": "rbo5672@gmail.com",
+        "subject": "=Resumen de video: {{ $node[\"If\"].json[\"titulo\"] }} - canal: {{ $node[\"If\"].json[\"canal\"] }} - fecha: {{ $node[\"If\"].json[\"fecha\"] }}",
+        "message": "=<div style=\"font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; border: 1px solid #eee; padding: 20px; border-radius: 8px;\">\n  <h2 style=\"color: #c4302b;\">📺 Resumen de Video YouTube generado por Modelo LLM</h2>\n  <hr style=\"border: 0; border-top: 1px solid #eee;\">\n  \n  <p><strong>Canal:</strong> {{ $node[\"If\"].json[\"canal\"] }}</p>\n  <p><strong>Título:</strong> {{ $node[\"If\"].json[\"titulo\"] }}</p>\n  <p><strong>Fecha:</strong> {{ $node[\"If\"].json[\"fecha\"] }}</p>\n  <p><strong>Modelo LLM:</strong> <span style=\"background-color: #f4f4f4; padding: 2px 5px; border-radius: 4px;\">Gemma2:9b</span></p>\n  \n  <div style=\"margin-top: 20px; padding: 15px; background-color: #fafafa; border-left: 4px solid #c4302b;\">\n    <h3 style=\"margin-top: 0;\">📝 Resumen</h3>\n    {{ $node[\"Basic LLM Chain\"].json[\"text\"].replace(/\\n/g, '<br>') }}\n  </div>\n\n  <div style=\"margin-top: 20px; text-align: center;\">\n    <a href=\"https://www.youtube.com/watch?v={{ $node[\"If\"].json[\"link\"] }}\" style=\"background-color: #c4302b; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;\">Ver Video en YouTube</a>\n  </div>\n  \n  <p style=\"font-size: 0.8em; color: #888; margin-top: 30px; border-top: 1px solid #eee; padding-top: 10px;\">\n    <i>Este correo fue enviado automáticamente mediante n8n.</i>\n  </p>\n</div>\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1488,
+        688
+      ],
+      "id": "8edc817b-dc6d-4acd-b8db-232d53ba79ac",
+      "name": "Send a message",
+      "webhookId": "c458b511-6895-451b-8399-9187aadf30f0",
+      "executeOnce": false,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "gSCSUMOFUmyQm3Cn",
+          "name": "Gmail account"
+        }
+      }
     }
   ],
   "pinData": {},
@@ -499,7 +523,7 @@
       "main": [
         [
           {
-            "node": "Loop Over Items",
+            "node": "Send a message",
             "type": "main",
             "index": 0
           }
@@ -601,6 +625,17 @@
           }
         ]
       ]
+    },
+    "Send a message": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
@@ -608,7 +643,7 @@
     "executionOrder": "v1",
     "binaryMode": "separate"
   },
-  "versionId": "a41e5dbf-c94f-4005-b9ca-ed52bc8bcd5b",
+  "versionId": "9674923a-ac56-4639-a610-2de83c652138",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "1aef7ee72d446b1874a94dbdef55b82361f771d2b657cb8544c791cfff89bee0"
