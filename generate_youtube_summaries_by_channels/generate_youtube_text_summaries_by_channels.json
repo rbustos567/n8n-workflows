@@ -5,7 +5,9 @@
       "parameters": {
         "rule": {
           "interval": [
-            {}
+            {
+              "triggerAtHour": 8
+            }
           ]
         }
       },
@@ -203,7 +205,7 @@
     },
     {
       "parameters": {
-        "jsCode": "let masterList = $getWorkflowStaticData('global').masterList||[];\n\nconst currentVideos = $input.all();\n\ncurrentVideos.forEach(item => {\n  masterList.push({\n    json: {\n      status:item.json.status,\n      link:item.json.link,\n      fecha:item.json.fecha,\n      titulo:item.json.titulo,\n      canal:item.json.canal\n    }\n  });\n});\n\n$getWorkflowStaticData('global').masterList = masterList\n\nreturn currentVideos;\n"
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst currentVideos = $input.all();\n\n// 1. Detectar nueva ejecución usando $execution.id\n// Si el ID de ejecución actual es diferente al guardado, reiniciamos la lista\nif (staticData.lastExecutionId !== $execution.id) {\n    staticData.masterList = []; \n    staticData.lastExecutionId = $execution.id;\n}\n\nlet masterList = staticData.masterList;\n\n// 2. Procesar videos evitando duplicados por el campo 'link'\ncurrentVideos.forEach(item => {\n    const videoLink = item.json.link;\n    \n    // Verificamos si ya existe en la lista\n    const existe = masterList.some(v => v.json.link === videoLink);\n\n    if (!existe) {\n        masterList.push({\n            json: {\n                status: item.json.status,\n                link: videoLink,\n                fecha: item.json.fecha,\n                titulo: item.json.titulo,\n                canal: item.json.canal\n            }\n        });\n    }\n});\n\n// 3. Guardar cambios\nstaticData.masterList = masterList;\n\nreturn currentVideos;\n\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -322,8 +324,8 @@
       "type": "n8n-nodes-base.readWriteFile",
       "typeVersion": 1.1,
       "position": [
-        304,
-        448
+        144,
+        672
       ],
       "id": "3cbd82d1-d032-4fbf-b666-543ae3123ae1",
       "name": "Read Video Transcription"
@@ -638,12 +640,16 @@
       ]
     }
   },
-  "active": false,
+  "active": true,
   "settings": {
     "executionOrder": "v1",
-    "binaryMode": "separate"
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "timezone": "America/Mexico_City",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
   },
-  "versionId": "03d6caea-a0a8-4b35-9e3d-9332bdad2865",
+  "versionId": "0bfcf84d-7846-4475-9bbb-13616ef2dfbf",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "1aef7ee72d446b1874a94dbdef55b82361f771d2b657cb8544c791cfff89bee0"
